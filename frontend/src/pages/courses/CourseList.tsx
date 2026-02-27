@@ -26,6 +26,7 @@ export const CourseList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterActive, setFilterActive] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [instructorFilter, setInstructorFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   
   const [courses, setCourses] = useState<Course[]>([]);
@@ -68,6 +69,11 @@ export const CourseList = () => {
     toast.success('Enrollment key copied!');
   };
 
+  // Build unique instructor list for filter (students only)
+  const instructorNames = !isInstructor
+    ? Array.from(new Set(courses.map(c => c.instructorName).filter(Boolean))).sort()
+    : [];
+
   // Filter and sort courses
   let filteredCourses = courses.filter(course => {
     const matchesSearch = 
@@ -78,9 +84,13 @@ export const CourseList = () => {
     if (!matchesSearch) return false;
     
     if (statusFilter === 'published') {
-      return course.status === 'published';
+      if (course.status !== 'published') return false;
     } else if (statusFilter === 'draft') {
-      return course.status === 'draft';
+      if (course.status !== 'draft') return false;
+    }
+
+    if (instructorFilter !== 'all' && course.instructorName !== instructorFilter) {
+      return false;
     }
     
     return true;
@@ -204,20 +214,41 @@ export const CourseList = () => {
           {/* Filter Options */}
           {filterActive && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="max-w-xs">
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
-                </label>
-                <select
-                  id="status"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                >
-                  <option value="all">All Courses</option>
-                  <option value="published">Published</option>
-                  {isInstructor && <option value="draft">Draft</option>}
-                </select>
+              <div className="flex flex-wrap gap-4">
+                <div className="max-w-xs">
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                  >
+                    <option value="all">All Courses</option>
+                    <option value="published">Published</option>
+                    {isInstructor && <option value="draft">Draft</option>}
+                  </select>
+                </div>
+
+                {!isInstructor && instructorNames.length > 0 && (
+                  <div className="max-w-xs">
+                    <label htmlFor="instructor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Instructor
+                    </label>
+                    <select
+                      id="instructor"
+                      value={instructorFilter}
+                      onChange={e => setInstructorFilter(e.target.value)}
+                      className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    >
+                      <option value="all">All Instructors</option>
+                      {instructorNames.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           )}
