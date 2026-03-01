@@ -121,6 +121,7 @@ class SessionOut(BaseModel):
     enrollmentKey: Optional[str] = None
     description: Optional[str] = None
     materials: Optional[List[str]] = []
+    clusterQuestionSource: Optional[Union[str, List[str]]] = None
 
 
 def _session_doc_to_out(doc, include_urls: bool = True) -> SessionOut:
@@ -149,6 +150,7 @@ def _session_doc_to_out(doc, include_urls: bool = True) -> SessionOut:
         enrollmentKey=doc.get("enrollmentKey"),
         description=doc.get("description"),
         materials=doc.get("materials", []),
+        clusterQuestionSource=doc.get("clusterQuestionSource"),
     )
 
 
