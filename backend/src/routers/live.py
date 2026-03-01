@@ -259,48 +259,81 @@ async def trigger_question(meeting_id: str):
         else:
             print(f"   🔵 Subsequent question → sending CLUSTER-WISE questions")
 
-        # 5) Send questions: first question = generic, after that = cluster-wise
+        # 5) Pre-pick questions: first round → same generic for all;
+        #    subsequent → one per cluster, then assign by cluster
         import random as _random
-        _cluster_labels = ["active", "moderate", "passive"]
+        import time as _time
         ws_sent_count = 0
         sent_questions = []
-        sent_generic_ids: set = set()
-        sent_cluster_ids: set = set()
+        cooldown_seconds = 10
 
+        scheduler_sent = quiz_scheduler.sent_questions.get(session_mongo_id or meeting_id, set())
+
+        student_question_map: Dict[str, dict] = {}
+
+        if is_first_question:
+            unsent_generic = [q for q in generic_qs if str(q["_id"]) not in scheduler_sent]
+            chosen = (
+                _random.choice(unsent_generic) if unsent_generic else
+                _random.choice(generic_qs) if generic_qs else
+                _random.choice(questions) if questions else None
+            )
+            if chosen:
+                for p in student_participants:
+                    student_question_map[p.get("studentId")] = chosen
+        else:
+            cluster_question_map: Dict[str, dict] = {}
+            cluster_labels_present = (
+                set(student_cluster_map.values()) if has_clustering
+                else {"active", "moderate", "passive"}
+            )
+            for cl in cluster_labels_present:
+                matching = [q for q in cluster_qs if q.get("category", "").lower() == cl]
+                unsent = [q for q in matching if str(q["_id"]) not in scheduler_sent]
+                if unsent:
+                    cluster_question_map[cl] = _random.choice(unsent)
+                elif matching:
+                    cluster_question_map[cl] = _random.choice(matching)
+
+            unsent_generic_fb = [q for q in generic_qs if str(q["_id"]) not in scheduler_sent]
+            generic_fallback = (
+                _random.choice(unsent_generic_fb) if unsent_generic_fb else
+                _random.choice(generic_qs) if generic_qs else None
+            )
+
+            for p in student_participants:
+                sid = p.get("studentId")
+                sc = student_cluster_map.get(sid) if has_clustering else None
+                q = None
+                if sc and sc in cluster_question_map:
+                    q = cluster_question_map[sc]
+                elif not has_clustering and cluster_question_map:
+                    q = cluster_question_map[_random.choice(list(cluster_question_map.keys()))]
+                if not q:
+                    q = generic_fallback
+                if not q and questions:
+                    q = _random.choice(questions)
+                if q:
+                    student_question_map[sid] = q
+
+        now = _time.time()
+        sid_key = session_mongo_id or meeting_id
         for participant in student_participants:
             student_id = participant.get("studentId")
             student_session_id = participant.get("sessionId", meeting_id)
-            student_cluster = student_cluster_map.get(student_id)
 
-            if not is_first_question and has_clustering and student_cluster:
-                student_cluster_qs = [
-                    q for q in cluster_qs
-                    if q.get("category", "").lower() == student_cluster
-                ]
-            elif not is_first_question and cluster_qs:
-                rand_cluster = _random.choice(_cluster_labels)
-                student_cluster_qs = [
-                    q for q in cluster_qs
-                    if q.get("category", "").lower() == rand_cluster
-                ]
-                if not student_cluster_qs:
-                    student_cluster_qs = list(cluster_qs)
-            else:
-                student_cluster_qs = []
-
-            q = _pick_question_ordered(generic_qs, student_cluster_qs, sent_generic_ids, sent_cluster_ids, is_first_question)
-
+            q = student_question_map.get(student_id)
             if not q:
                 print(f"   ⚠️ No questions available for {participant.get('studentName', student_id)}")
                 continue
 
-            qid = str(q["_id"])
-            if q.get("questionType") == "cluster":
-                sent_cluster_ids.add(qid)
-            else:
-                sent_generic_ids.add(qid)
+            last_t = quiz_scheduler.last_delivery_time.get(sid_key, {}).get(student_id, 0)
+            if now - last_t < cooldown_seconds:
+                print(f"   ⏳ Skipping {student_id[:12]} — cooldown ({now - last_t:.0f}s ago)")
+                continue
 
-            print(f"   🎲 {participant.get('studentName', student_id)} (cluster={student_cluster or 'none'}) → "
+            qid = str(q["_id"])
+            print(f"   🎲 {participant.get('studentName', student_id)} (cluster={student_cluster_map.get(student_id) or 'none'}) → "
                   f"[{q.get('questionType', 'generic')}] {q.get('question', '')[:50]}...")
 
             message = {
@@ -322,6 +355,8 @@ async def trigger_question(meeting_id: str):
                 sent = await ws_manager.send_to_student_in_session(meeting_id, student_id, message)
             if sent:
                 ws_sent_count += 1
+                quiz_scheduler.last_delivery_time.setdefault(sid_key, {})[student_id] = _time.time()
+                quiz_scheduler.sent_questions.setdefault(sid_key, set()).add(qid)
                 sent_questions.append({
                     "studentId": student_id,
                     "studentName": participant.get("studentName"),
@@ -515,43 +550,78 @@ async def trigger_same_question_to_all(meeting_id: str, user: dict = Depends(req
         else:
             print(f"   🔵 Subsequent question → sending CLUSTER-WISE questions")
 
-        # Send questions: first = generic, after that = cluster-wise
+        # Pre-pick questions: first round → same generic for all;
+        # subsequent → one per cluster, then assign by cluster
         import random as _random
-        _cluster_labels = ["active", "moderate", "passive"]
+        import time as _time
         ws_sent_count = 0
-        sent_generic_ids: set = set()
-        sent_cluster_ids: set = set()
+        cooldown_seconds = 10
 
+        scheduler_sent = quiz_scheduler.sent_questions.get(session_mongo_id or effective_meeting_id, set())
+
+        student_question_map: Dict[str, dict] = {}
+
+        if is_first_question:
+            unsent_generic = [q for q in generic_qs if str(q["_id"]) not in scheduler_sent]
+            chosen = (
+                _random.choice(unsent_generic) if unsent_generic else
+                _random.choice(generic_qs) if generic_qs else
+                _random.choice(questions) if questions else None
+            )
+            if chosen:
+                for p in participants:
+                    student_question_map[p.get("studentId")] = chosen
+        else:
+            cluster_question_map_local: Dict[str, dict] = {}
+            cluster_labels_present = (
+                set(student_cluster_map.values()) if has_clustering
+                else {"active", "moderate", "passive"}
+            )
+            for cl in cluster_labels_present:
+                matching = [q for q in cluster_qs if q.get("category", "").lower() == cl]
+                unsent = [q for q in matching if str(q["_id"]) not in scheduler_sent]
+                if unsent:
+                    cluster_question_map_local[cl] = _random.choice(unsent)
+                elif matching:
+                    cluster_question_map_local[cl] = _random.choice(matching)
+
+            unsent_generic_fb = [q for q in generic_qs if str(q["_id"]) not in scheduler_sent]
+            generic_fallback = (
+                _random.choice(unsent_generic_fb) if unsent_generic_fb else
+                _random.choice(generic_qs) if generic_qs else None
+            )
+
+            for p in participants:
+                sid = p.get("studentId")
+                sc = student_cluster_map.get(sid) if has_clustering else None
+                q = None
+                if sc and sc in cluster_question_map_local:
+                    q = cluster_question_map_local[sc]
+                elif not has_clustering and cluster_question_map_local:
+                    q = cluster_question_map_local[_random.choice(list(cluster_question_map_local.keys()))]
+                if not q:
+                    q = generic_fallback
+                if not q and questions:
+                    q = _random.choice(questions)
+                if q:
+                    student_question_map[sid] = q
+
+        now = _time.time()
+        sid_key = session_mongo_id or effective_meeting_id
         for participant in participants:
             student_id = participant.get("studentId")
             student_session_id = participant.get("sessionId", effective_meeting_id)
-            student_cluster = student_cluster_map.get(student_id)
 
-            if not is_first_question and has_clustering and student_cluster:
-                student_cluster_qs = [
-                    q for q in cluster_qs
-                    if q.get("category", "").lower() == student_cluster
-                ]
-            elif not is_first_question and cluster_qs:
-                rand_cluster = _random.choice(_cluster_labels)
-                student_cluster_qs = [
-                    q for q in cluster_qs
-                    if q.get("category", "").lower() == rand_cluster
-                ]
-                if not student_cluster_qs:
-                    student_cluster_qs = list(cluster_qs)
-            else:
-                student_cluster_qs = []
-
-            q = _pick_question_ordered(generic_qs, student_cluster_qs, sent_generic_ids, sent_cluster_ids, is_first_question)
+            q = student_question_map.get(student_id)
             if not q:
                 continue
 
+            last_t = quiz_scheduler.last_delivery_time.get(sid_key, {}).get(student_id, 0)
+            if now - last_t < cooldown_seconds:
+                print(f"   ⏳ Skipping {student_id[:12]} — cooldown ({now - last_t:.0f}s ago)")
+                continue
+
             qid = str(q["_id"])
-            if q.get("questionType") == "cluster":
-                sent_cluster_ids.add(qid)
-            else:
-                sent_generic_ids.add(qid)
 
             message = {
                 "type": "quiz",
@@ -572,8 +642,10 @@ async def trigger_same_question_to_all(meeting_id: str, user: dict = Depends(req
                 sent = await ws_manager.send_to_student_in_session(effective_meeting_id, student_id, message)
             if sent:
                 ws_sent_count += 1
+                quiz_scheduler.last_delivery_time.setdefault(sid_key, {})[student_id] = _time.time()
+                quiz_scheduler.sent_questions.setdefault(sid_key, set()).add(qid)
                 print(f"   ✅ {participant.get('studentName', student_id)} "
-                      f"(cluster={student_cluster or 'none'}) → [{q.get('questionType', 'generic')}]")
+                      f"(cluster={student_cluster_map.get(student_id) or 'none'}) → [{q.get('questionType', 'generic')}]")
 
         participants_list = ws_manager.get_session_participants(effective_meeting_id)
         return {

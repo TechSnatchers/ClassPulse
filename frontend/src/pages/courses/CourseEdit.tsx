@@ -140,8 +140,8 @@ export const CourseEdit = () => {
     return (
       <div className="py-6">
         <Card className="p-6 text-center">
-          <h2 className="text-xl font-semibold">Access Denied</h2>
-          <p>Only instructors can edit courses.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Access Denied</h2>
+          <p className="text-gray-700 dark:text-gray-300">Only instructors can edit courses.</p>
           <Button onClick={() => navigate('/dashboard/courses')}>
             Go Back
           </Button>
@@ -172,12 +172,12 @@ export const CourseEdit = () => {
         Back to Courses
       </Button>
 
-      <h1 className="text-2xl font-bold mb-6">Edit Course</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Edit Course</h1>
 
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold flex items-center gap-2">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
               <BookOpenIcon className="h-5 w-5" />
               Course Information
             </h2>

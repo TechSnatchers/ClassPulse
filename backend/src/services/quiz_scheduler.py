@@ -36,6 +36,9 @@ class QuizScheduler:
         # Sent questions per session: {session_id: set(question_ids)}
         self.sent_questions: Dict[str, Set[str]] = {}
         
+        # Per-student last delivery timestamp: {session_id: {student_id: float}}
+        self.last_delivery_time: Dict[str, Dict[str, float]] = {}
+        
         # Default configuration
         self.default_first_delay = 120  # 2 minutes
         self.default_interval = 600     # 10 minutes
@@ -368,64 +371,79 @@ class QuizScheduler:
                 print(f"⚠️ No participants in session — stored quiz for reconnect catch-up")
                 return {"success": True, "message": "Question stored (no online students)", "sentTo": 0}
 
-            # ── 5. Pick a question PER student: generic first, then cluster ──
-            sent_ids = self.sent_questions.get(session_id, set())
+            # ── 5. Pick questions: first round → same generic for all;
+            #       subsequent → one per cluster, then assign by cluster ──
+            import time as _time
+            sent_ids = set(self.sent_questions.get(session_id, set()))  # snapshot copy
             student_questions: Dict[str, dict] = {}
+            newly_sent_ids: set = set()
+            cooldown_seconds = 10
 
-            # Pre-build cluster label list for random assignment when clustering is unavailable
-            cluster_labels = ["active", "moderate", "passive"]
-
-            for sid_val in students_to_send:
-                student_cluster = student_cluster_map.get(sid_val) if has_clustering else None
-
-                if is_first_question:
-                    unsent_generic = [q for q in generic_qs if str(q["_id"]) not in sent_ids]
-                    if unsent_generic:
-                        q = random.choice(unsent_generic)
-                    elif generic_qs:
-                        q = random.choice(generic_qs)
-                    else:
-                        q = None
-                        print(f"   ⚠️ No generic questions available for first round — skipping student {sid_val}")
+            if is_first_question:
+                unsent_generic = [q for q in generic_qs if str(q["_id"]) not in sent_ids]
+                chosen = (
+                    random.choice(unsent_generic) if unsent_generic else
+                    random.choice(generic_qs) if generic_qs else
+                    random.choice(questions) if questions else None
+                )
+                if chosen:
+                    now = _time.time()
+                    for sid_val in students_to_send:
+                        last_t = self.last_delivery_time.get(session_id, {}).get(sid_val, 0)
+                        if now - last_t < cooldown_seconds:
+                            print(f"   ⏳ Skipping {sid_val[:12]} — cooldown ({now - last_t:.0f}s ago)")
+                            continue
+                        student_questions[sid_val] = chosen
+                    newly_sent_ids.add(str(chosen["_id"]))
                 else:
-                    # Subsequent questions → cluster-wise first, then generic fallback
-                    if has_clustering and student_cluster:
-                        # Known cluster assignment → pick matching cluster questions
-                        student_cluster_qs = [
-                            q for q in cluster_qs_all
-                            if q.get("category", "").lower() == student_cluster
-                        ]
-                    elif cluster_qs_all:
-                        # No clustering data but cluster questions exist →
-                        # assign a random cluster label so the student still
-                        # receives a cluster question instead of always getting generic
-                        random_cluster = random.choice(cluster_labels)
-                        student_cluster_qs = [
-                            q for q in cluster_qs_all
-                            if q.get("category", "").lower() == random_cluster
-                        ]
-                        # If the random cluster has no questions, use all cluster questions
-                        if not student_cluster_qs:
-                            student_cluster_qs = list(cluster_qs_all)
-                    else:
-                        student_cluster_qs = []
+                    print(f"   ⚠️ No questions available at all for first round")
+            else:
+                cluster_question_map: Dict[str, dict] = {}
+                cluster_labels_present = (
+                    set(student_cluster_map.values()) if has_clustering
+                    else {"active", "moderate", "passive"}
+                )
 
-                    unsent_cluster = [q for q in student_cluster_qs if str(q["_id"]) not in sent_ids]
-                    if unsent_cluster:
-                        q = random.choice(unsent_cluster)
-                    else:
-                        unsent_generic = [q for q in generic_qs if str(q["_id"]) not in sent_ids]
-                        if unsent_generic:
-                            q = random.choice(unsent_generic)
-                        else:
-                            pool = student_cluster_qs + generic_qs
-                            if not pool:
-                                pool = generic_qs if generic_qs else questions
-                            q = random.choice(pool) if pool else None
+                for cl in cluster_labels_present:
+                    matching = [q for q in cluster_qs_all if q.get("category", "").lower() == cl]
+                    unsent = [q for q in matching if str(q["_id"]) not in sent_ids]
+                    if unsent:
+                        cluster_question_map[cl] = random.choice(unsent)
+                    elif matching:
+                        cluster_question_map[cl] = random.choice(matching)
 
-                if q:
-                    student_questions[sid_val] = q
-                    self.sent_questions.setdefault(session_id, set()).add(str(q["_id"]))
+                unsent_generic_fb = [q for q in generic_qs if str(q["_id"]) not in sent_ids]
+                generic_fallback = (
+                    random.choice(unsent_generic_fb) if unsent_generic_fb else
+                    random.choice(generic_qs) if generic_qs else None
+                )
+
+                now = _time.time()
+                for sid_val in students_to_send:
+                    last_t = self.last_delivery_time.get(session_id, {}).get(sid_val, 0)
+                    if now - last_t < cooldown_seconds:
+                        print(f"   ⏳ Skipping {sid_val[:12]} — cooldown ({now - last_t:.0f}s ago)")
+                        continue
+
+                    student_cluster = student_cluster_map.get(sid_val) if has_clustering else None
+                    q = None
+
+                    if student_cluster and student_cluster in cluster_question_map:
+                        q = cluster_question_map[student_cluster]
+                    elif not has_clustering and cluster_question_map:
+                        random_cl = random.choice(list(cluster_question_map.keys()))
+                        q = cluster_question_map[random_cl]
+
+                    if not q:
+                        q = generic_fallback
+                    if not q and questions:
+                        q = random.choice(questions)
+
+                    if q:
+                        student_questions[sid_val] = q
+                        newly_sent_ids.add(str(q["_id"]))
+
+            self.sent_questions.setdefault(session_id, set()).update(newly_sent_ids)
 
             if not student_questions:
                 return {"success": False, "message": "No eligible questions for any student"}
@@ -478,6 +496,7 @@ class QuizScheduler:
                     ws_manager.last_student_quiz.setdefault(room_id, {})[sid_val] = {
                         "message": msg, "sent_at": datetime.now()
                     }
+                    self.last_delivery_time.setdefault(session_id, {})[sid_val] = _time.time()
                     try:
                         await QuestionAssignmentModel.create(room_id, sid_val, str(q["_id"]), 0)
                     except Exception:

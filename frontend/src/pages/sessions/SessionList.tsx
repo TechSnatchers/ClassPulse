@@ -997,10 +997,10 @@ export const SessionList = () => {
                 <KeyIcon className="h-6 w-6 text-indigo-600" />
               </div>
               <div className="ml-4 flex-1">
-                <h3 className="text-lg font-semibold text-indigo-900 mb-2">
+                <h3 className="text-lg font-semibold text-indigo-900 dark:text-indigo-200 mb-2">
                   Standalone Meetings Available
                 </h3>
-                <p className="text-sm text-indigo-700 mb-4">
+                <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-4">
                   {unenrolledStandaloneSessions.length} meeting(s) require an enrollment key to access.
                   Ask your instructor for the key to join these meetings.
                 </p>

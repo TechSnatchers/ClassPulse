@@ -176,7 +176,7 @@ export const StudentEnrollment = () => {
       {/* Enrolled Courses */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <h2 className="text-lg font-semibold flex items-center">
+          <h2 className="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
             <BookOpenIcon className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
             My Enrolled Courses ({enrolledCourses.length})
           </h2>

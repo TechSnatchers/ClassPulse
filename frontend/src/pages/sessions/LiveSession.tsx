@@ -594,8 +594,8 @@ export const LiveSession = () => {
       <div className="py-6">
         <Card className="p-6">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Not Found</h2>
-            <p className="text-gray-600 mb-4">No session ID provided in the URL.</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Session Not Found</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No session ID provided in the URL.</p>
             <Button variant="primary" onClick={() => window.location.href = '/dashboard/sessions'}>
               Go to Sessions
             </Button>
@@ -689,7 +689,7 @@ export const LiveSession = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
                 <div className="flex items-center space-x-2">
                   <TargetIcon className="h-5 w-5 text-indigo-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Active Question</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Active Question</h3>
                   <Badge variant="danger">LIVE</Badge>
                 </div>
                 <div className="flex gap-2">
@@ -723,11 +723,11 @@ export const LiveSession = () => {
                       ? '✅ Great job! Your answer has been recorded.' 
                       : '📝 Your answer has been recorded. Keep learning!'}
                   </p>
-                  <div className="text-sm text-gray-700 space-y-2 border-t border-blue-200 pt-3 mt-3">
-                    <p className="font-medium text-gray-900">Answer details</p>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2 border-t border-blue-200 dark:border-blue-700 pt-3 mt-3">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">Answer details</p>
                     {selectedAnswerIndex !== null && activeQuestion.options[selectedAnswerIndex] != null && (
                       <p>
-                        <span className="text-gray-600">Your answer: </span>
+                        <span className="text-gray-600 dark:text-gray-400">Your answer: </span>
                         <span className={isCorrect ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
                           {String.fromCharCode(65 + selectedAnswerIndex)}. {activeQuestion.options[selectedAnswerIndex]}
                         </span>
@@ -735,7 +735,7 @@ export const LiveSession = () => {
                     )}
                     {activeQuestion.correctAnswer >= 0 && activeQuestion.options[activeQuestion.correctAnswer] != null && (
                       <p>
-                        <span className="text-gray-600">Correct answer: </span>
+                        <span className="text-gray-600 dark:text-gray-400">Correct answer: </span>
                         <span className="text-green-700 font-medium">
                           {String.fromCharCode(65 + activeQuestion.correctAnswer)}. {activeQuestion.options[activeQuestion.correctAnswer]}
                         </span>

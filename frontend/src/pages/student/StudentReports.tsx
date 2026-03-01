@@ -96,7 +96,7 @@ interface MyStoredReport {
 export const StudentReports = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'stored' | 'attendance' | 'quiz' | 'history'>('stored');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'quiz' | 'history'>('attendance');
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
@@ -117,7 +117,6 @@ export const StudentReports = () => {
 
   useEffect(() => {
     fetchDashboardStats();
-    fetchStoredReports();
     fetchAttendance();
   }, []);
 
@@ -380,7 +379,6 @@ export const StudentReports = () => {
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
         {[
-          { id: 'stored', label: 'Session Reports', icon: FileTextIcon },
           { id: 'attendance', label: 'Attendance', icon: ClockIcon },
           { id: 'quiz', label: 'Quiz Scores', icon: FileTextIcon },
           { id: 'history', label: 'Session History', icon: BookOpenIcon }
@@ -407,118 +405,6 @@ export const StudentReports = () => {
         </div>
       ) : (
         <>
-          {/* Stored Reports Tab */}
-          {activeTab === 'stored' && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    My Session Reports
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="success">{storedReports.length} Reports</Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<RefreshCwIcon className="h-4 w-4" />}
-                      onClick={fetchStoredReports}
-                    >
-                      Refresh
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  These are your personal reports from completed sessions. Shows only your own data.
-                </p>
-              </CardHeader>
-              <CardContent>
-                {storedReports.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileTextIcon className="h-16 w-16 text-gray-300 dark:text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400 text-lg">No session reports yet</p>
-                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                      Reports are generated after the instructor ends a session you participated in
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 dark:bg-gray-800">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Session</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Course</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">My Questions</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">My Correct</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">My Score</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Attendance</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {storedReports.map((report) => (
-                          <tr key={report.reportId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                              {report.sessionTitle}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {report.courseName}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {report.sessionDate}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {report.myTotalQuestions}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                <CheckCircleIcon className="h-4 w-4" />
-                                {report.myCorrectAnswers}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              {report.myScore !== null ? (
-                                <Badge variant={report.myScore >= 70 ? 'success' : report.myScore >= 50 ? 'warning' : 'destructive'}>
-                                  {report.myScore}%
-                                </Badge>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">-</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {report.myAttendanceDuration !== null ? `${report.myAttendanceDuration} min` : '-'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  leftIcon={<EyeIcon className="h-3 w-3" />}
-                                  onClick={() => navigate(`/dashboard/sessions/${report.sessionId}/report`)}
-                                >
-                                  View
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  leftIcon={downloadingReportId === report.sessionId ? <Loader2Icon className="h-3 w-3 animate-spin" /> : <DownloadIcon className="h-3 w-3" />}
-                                  onClick={() => handleDownloadReport(report)}
-                                  disabled={downloadingReportId === report.sessionId}
-                                >
-                                  {downloadingReportId === report.sessionId ? 'Downloading...' : 'Download report'}
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           {/* Attendance Tab */}
           {activeTab === 'attendance' && (
             <Card>

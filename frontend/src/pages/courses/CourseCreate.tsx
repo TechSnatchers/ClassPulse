@@ -95,11 +95,11 @@ export const CourseCreate = () => {
               <BookOpenIcon className="h-8 w-8 text-blue-600" />
             </div>
             
-            <h2 className="text-2xl font-bold text-blue-800 mb-2">
+            <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-200 mb-2">
               Course Created Successfully!
             </h2>
             
-            <p className="text-blue-700 mb-6">
+            <p className="text-blue-700 dark:text-blue-300 mb-6">
               "{createdCourse.title}" has been created.
             </p>
 
@@ -188,7 +188,7 @@ export const CourseCreate = () => {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold">Course Information</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Course Information</h2>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -284,7 +284,7 @@ export const CourseCreate = () => {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-semibold">Publish Settings</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Publish Settings</h2>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>

@@ -213,7 +213,7 @@ export const CourseManagement = () => {
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold flex items-center">
+              <h2 className="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
                 <BookOpenIcon className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
                 My Courses ({courses.length})
               </h2>
@@ -340,7 +340,7 @@ export const CourseManagement = () => {
               {/* Enrollment Key Card */}
               <Card className="border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-900/10">
                 <CardHeader>
-                  <h3 className="text-lg font-semibold flex items-center">
+                  <h3 className="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
                     <KeyIcon className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
                     Enrollment Key
                   </h3>
@@ -404,7 +404,7 @@ export const CourseManagement = () => {
               {/* Enrolled Students Card */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <h3 className="text-lg font-semibold flex items-center">
+                  <h3 className="text-lg font-semibold flex items-center text-gray-900 dark:text-gray-100">
                     <UsersIcon className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400" />
                     Enrolled Students ({students.length})
                   </h3>
