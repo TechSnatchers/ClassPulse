@@ -149,6 +149,17 @@ export const Register = () => {
 
   const passwordStrength = getPasswordStrength();
 
+  const isStep1Complete =
+    formData.firstName.trim().length >= 2 &&
+    formData.lastName.trim().length >= 2 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+
+  const isStep2Complete =
+    formData.password.length >= 6 &&
+    /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password) &&
+    formData.confirmPassword === formData.password &&
+    formData.networkMonitoringConsent;
+
   // Show success screen after registration
   if (registrationComplete) {
     return (
@@ -417,17 +428,18 @@ export const Register = () => {
           <button
             type="button"
             onClick={handleNextStep}
-            className="
+            disabled={!isStep1Complete}
+            className={`
               w-full py-4 px-6 rounded-xl font-semibold text-white
-              bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 
-              hover:from-blue-600 hover:via-blue-700 hover:to-blue-700
               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-              transform hover:scale-[1.02] active:scale-[0.98]
               transition-all duration-200
-              shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40
               flex items-center justify-center gap-2
               group
-            "
+              ${isStep1Complete
+                ? 'bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 hover:from-blue-600 hover:via-blue-700 hover:to-blue-700 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 cursor-pointer'
+                : 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed opacity-60'
+              }
+            `}
           >
             Continue
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -645,18 +657,17 @@ export const Register = () => {
             </button>
             <button
               type="submit"
-              disabled={isLoading}
-              className="
+              disabled={isLoading || !isStep2Complete}
+              className={`
                 relative flex-1 py-4 px-6 rounded-xl font-semibold text-white
-                bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 
-                hover:from-blue-600 hover:via-blue-700 hover:to-blue-700
                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                disabled:opacity-70 disabled:cursor-not-allowed
-                transform hover:scale-[1.02] active:scale-[0.98]
                 transition-all duration-200
-                shadow-lg shadow-blue-500/30
                 group overflow-hidden
-              "
+                ${isStep2Complete && !isLoading
+                  ? 'bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 hover:from-blue-600 hover:via-blue-700 hover:to-blue-700 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-500/30 cursor-pointer'
+                  : 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed opacity-60'
+                }
+              `}
             >
               <span className={`flex items-center justify-center gap-2 ${isLoading ? 'opacity-0' : ''}`}>
                 Create account
